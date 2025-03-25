@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube MP3 & MP4 Downloader - Fast & Free Video Converter</title>
+    <meta name="description" content="Convert and download YouTube videos to MP3 or MP4 format instantly. Free, fast, and no registration required. High-quality audio and video downloads.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar"></div>
+
+    <header class="glass">
+        <nav>
+            <div class="container">
+                <div class="logo">
+                    <a href="/" class="gradient-text">YT Downloader</a>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="youtube-mp3-converter.html" class="slide-in-right">MP3 Converter</a></li>
+                    <li><a href="youtube-mp4-converter.html" class="slide-in-right">MP4 Converter</a></li>
+                    <li><a href="youtube-to-mp3.html" class="slide-in-right">YouTube to MP3</a></li>
+                    <li><a href="youtube-audio-downloader.html" class="slide-in-right">Audio Downloader</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero animated-bg">
+            <div class="particles"></div>
+            <div class="container">
+                <h1 class="fade-in">Download YouTube Videos in MP3 & MP4</h1>
+                <p class="fade-in">Fast, free, and high-quality YouTube video converter</p>
+                <div class="converter-box glass fade-in">
+                    <input type="text" id="videoUrl" placeholder="Paste YouTube URL here..." class="url-input">
+                    <div class="format-selector">
+                        <button class="format-btn button-effect active" data-format="mp3">MP3</button>
+                        <button class="format-btn button-effect" data-format="mp4">MP4</button>
+                    </div>
+                    <button id="downloadBtn" class="download-btn button-effect">Download Now</button>
+                </div>
+                <div id="status" class="status-message"></div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="container">
+                <h2 class="gradient-text fade-in">Why Choose Our YouTube Downloader?</h2>
+                <div class="feature-grid">
+                    <div class="feature-card slide-in-left">
+                        <h3>🚀 Lightning Fast</h3>
+                        <p>Download videos in seconds with our optimized conversion system.</p>
+                    </div>
+                    <div class="feature-card slide-in-left">
+                        <h3>💯 High Quality</h3>
+                        <p>Get the best quality MP3 and MP4 downloads available.</p>
+                    </div>
+                    <div class="feature-card slide-in-right">
+                        <h3>🔒 Secure & Safe</h3>
+                        <p>No registration required. Your privacy is our priority.</p>
+                    </div>
+                    <div class="feature-card slide-in-right">
+                        <h3>💻 All Devices</h3>
+                        <p>Works perfectly on desktop, tablet, and mobile devices.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-section fade-in">
+            <div class="container">
+                <h2>Ready to Download?</h2>
+                <p>Join millions of users who trust our YouTube downloader for their media needs.</p>
+                <button class="download-btn button-effect">Get Started Now</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 YouTube Downloader. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script src="js/animations.js"></script>
+    <script>
+        // Initialize all animations when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initAllAnimations();
+        });
+    </script>
+</body>
+</html>
