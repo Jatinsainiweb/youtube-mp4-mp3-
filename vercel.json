@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "server.js", "use": "@vercel/node" },
+    { "src": "api/**/*.js", "use": "@vercel/node" },
+    { "src": "*.html", "use": "@vercel/static" },
+    { "src": "*.css", "use": "@vercel/static" },
+    { "src": "*.js", "use": "@vercel/static", "config": { "includeFiles": ["script.js"] } }
+  ],
+  "routes": [
+    { "src": "/api/download", "dest": "/api/download.js" },
+    { "src": "/api/download/(.*)", "dest": "/api/download-file.js" },
+    { "src": "/download", "dest": "server.js" },
+    { "src": "/downloads/(.*)", "dest": "server.js" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
