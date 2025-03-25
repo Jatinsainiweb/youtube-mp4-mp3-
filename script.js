@@ -10,8 +10,8 @@ class YoutubeConverter {
   constructor() {
     // Configuration settings
     this.config = {
-      // API endpoint for conversion requests - dynamically determine if we're in production or development
-      apiUrl: window.location.hostname === 'localhost' ? '/download' : '/api/download',
+      // API endpoint for conversion requests
+      apiUrl: 'https://youtube-converter-backend-git-main-jatin-sainis-projects.vercel.app/api/download',
       // Maximum number of download links to display
       maxDownloadHistory: 5,
       // Active conversion requests tracking
@@ -56,13 +56,52 @@ class YoutubeConverter {
   }
 
   /**
+   * Show error message to the user
+   * @param {string} message - Error message to display
+   */
+  showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    
+    // Remove any existing error messages
+    document.querySelectorAll('.error-message').forEach(el => el.remove());
+    
+    // Insert error message after the URL input
+    const urlInput = document.querySelector('.url-input');
+    urlInput.parentNode.insertBefore(errorDiv, urlInput.nextSibling);
+    
+    // Remove error message after 5 seconds
+    setTimeout(() => errorDiv.remove(), 5000);
+  }
+
+  /**
+   * Show success message to the user
+   * @param {string} message - Success message to display
+   */
+  showSuccessMessage(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-message';
+    successDiv.textContent = message;
+    
+    // Remove any existing success messages
+    document.querySelectorAll('.success-message').forEach(el => el.remove());
+    
+    // Insert success message after the URL input
+    const urlInput = document.querySelector('.url-input');
+    urlInput.parentNode.insertBefore(successDiv, urlInput.nextSibling);
+    
+    // Remove success message after 5 seconds
+    setTimeout(() => successDiv.remove(), 5000);
+  }
+
+  /**
    * Handle the conversion request for a specific format
    * @param {string} format - 'mp3' or 'mp4'
    * @param {HTMLElement} buttonElement - The button that triggered the conversion
    */
   async handleConversion(format, buttonElement) {
     const urlInput = document.querySelector('.url-input');
-    const quality = document.querySelector('.quality-select')?.value || 'high';
     const requestId = Date.now().toString();
     
     // Validate URL before proceeding
@@ -79,7 +118,8 @@ class YoutubeConverter {
       const response = await fetch(this.config.apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           url: urlInput.value,
@@ -96,17 +136,20 @@ class YoutubeConverter {
       // Reset button state
       this.setButtonLoadingState(buttonElement, false, requestId);
       
-      // Create download link with enhanced information
-      this.createDownloadLink({
-        url: data.downloadLink,
-        format: format,
-        fileSize: data.fileSize,
-        processingTime: data.processingTime
-      });
-      
-      this.showSuccessMessage(`Your ${format.toUpperCase()} is ready for download! (${data.fileSize})`);
+      if (data.success && data.downloadLink) {
+        // Create download link
+        this.createDownloadLink({
+          url: data.downloadLink,
+          format: format,
+          title: data.title
+        });
+        
+        this.showSuccessMessage(`Your ${format.toUpperCase()} is ready for download!`);
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
-      // Handle specific error types
+      // Reset button state
       this.setButtonLoadingState(buttonElement, false, requestId);
       
       // Provide user-friendly error message
@@ -133,6 +176,16 @@ class YoutubeConverter {
     // Server-related errors
     if (errorMessage.includes('Server error') || errorMessage.includes('500')) {
       return 'Our servers are currently busy. Please try again in a few minutes.';
+    }
+    
+    // File not found errors
+    if (errorMessage.includes('File not found')) {
+      return 'The download file could not be found. Please try converting again.';
+    }
+    
+    // yt-dlp related errors
+    if (errorMessage.includes('Download service') || errorMessage.includes('temporarily unavailable')) {
+      return 'Our download service is temporarily unavailable. Please try again later or contact support if the issue persists.';
     }
     
     // Return the original message if no specific handling is needed
@@ -177,97 +230,45 @@ class YoutubeConverter {
     
     // Create download link element
     const downloadLink = document.createElement('a');
-    // Ensure the download link is properly formatted with absolute URL if needed
-    let downloadUrl = data.downloadLink || data.url;
-    // If the URL is relative and we're not on localhost, make sure it has the correct base URL
-    if (downloadUrl.startsWith('/')) {
-      // Always use the current origin for relative URLs to ensure they work in all environments
-      downloadUrl = `${window.location.origin}${downloadUrl}`;
-    }
-    downloadLink.href = downloadUrl;
+    downloadLink.href = data.url;
     downloadLink.className = 'download-link';
-    downloadLink.download = '';
+    downloadLink.target = '_blank';
+    downloadLink.rel = 'noopener noreferrer';
     
-    // Add detailed information to the download link
-    downloadLink.innerHTML = `
-      <span class="btn-content">
-        ⬇️ Download ${data.format.toUpperCase()}
-        ${data.fileSize ? `<span class="file-size">(${data.fileSize})</span>` : ''}
-      </span>
-    `;
+    // Add icon based on format
+    const icon = data.format === 'mp3' ? '🎵' : '🎥';
+    downloadLink.innerHTML = `${icon} Download ${data.title || 'Video'} (${data.format.toUpperCase()})`;
     
-    // Add to download history (prepend to show newest first)
-    downloadContainer.prepend(downloadLink);
+    // Add the new link at the top
+    downloadContainer.insertBefore(downloadLink, downloadContainer.firstChild);
     
-    // Limit the number of download links
-    const links = downloadContainer.querySelectorAll('.download-link');
-    if (links.length > this.config.maxDownloadHistory) {
-      for (let i = this.config.maxDownloadHistory; i < links.length; i++) {
-        links[i].remove();
-      }
+    // Remove oldest link if we exceed the maximum
+    while (downloadContainer.children.length > this.config.maxDownloadHistory) {
+      downloadContainer.removeChild(downloadContainer.lastChild);
     }
   }
 
   /**
-   * Create a container for download history if it doesn't exist
-   * @returns {HTMLElement} - The download history container
+   * Create container for download history if it doesn't exist
+   * @returns {HTMLElement} - Download history container
    */
   createDownloadHistoryContainer() {
-    const ctaContainer = document.querySelector('.cta-container');
+    const container = document.createElement('div');
+    container.className = 'download-history';
     
-    // Create download history section
-    const downloadHistory = document.createElement('div');
-    downloadHistory.className = 'download-history';
-    downloadHistory.innerHTML = '<h3>Download History</h3>';
+    // Insert after the format buttons
+    const formatButtons = document.querySelector('.format-buttons');
+    formatButtons.parentNode.insertBefore(container, formatButtons.nextSibling);
     
-    // Add to page
-    ctaContainer.appendChild(downloadHistory);
-    
-    return downloadHistory;
+    return container;
   }
 
   /**
-   * Display an error message to the user
-   * @param {string} message - Error message to display
-   */
-  showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    document.querySelector('.cta-container').prepend(errorDiv);
-    
-    // Auto-remove after delay
-    setTimeout(() => errorDiv.remove(), 5000);
-  }
-
-  /**
-   * Display a success message to the user
-   * @param {string} message - Success message to display
-   */
-  showSuccessMessage(message) {
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
-    successDiv.textContent = message;
-    document.querySelector('.cta-container').prepend(successDiv);
-    
-    // Auto-remove after delay
-    setTimeout(() => successDiv.remove(), 5000);
-  }
-
-  /**
-   * Toggle dark mode and save preference
+   * Toggle dark mode
    */
   toggleDarkMode() {
-    document.body.classList.toggle('dark');
-    localStorage.setItem('darkMode', document.body.classList.contains('dark'));
-  }
-
-  /**
-   * Initialize dark mode from saved preference
-   */
-  initDarkMode() {
-    const isDark = localStorage.getItem('darkMode') === 'true';
-    document.body.classList.toggle('dark', isDark);
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
   }
 }
 
@@ -275,53 +276,11 @@ class YoutubeConverter {
  * Initialize the application when the DOM is fully loaded
  */
 document.addEventListener('DOMContentLoaded', () => {
-  // Create and initialize the converter
+  // Initialize the converter
   const converter = new YoutubeConverter();
-  converter.initDarkMode();
   
-  // Store original button text for restoration after loading
-  document.querySelectorAll('.btn').forEach(btn => {
-    btn.dataset.originalText = btn.innerHTML;
-  });
-  
-  // Add CSS for download history container
-  const style = document.createElement('style');
-  style.textContent = `
-    .download-history {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      width: 100%;
-      max-width: 600px;
-    }
-    
-    .download-history h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 1.2rem;
-      color: var(--primary-color);
-    }
-    
-    .download-link {
-      margin: 8px 0;
-      display: block;
-    }
-    
-    .file-size {
-      font-size: 0.8rem;
-      opacity: 0.8;
-      margin-left: 5px;
-    }
-    
-    body.dark .download-history {
-      background: rgba(30, 41, 59, 0.8);
-    }
-    
-    body.dark .download-history h3 {
-      color: #e2e8f0;
-    }
-  `;
-  document.head.appendChild(style);
+  // Check and apply dark mode preference
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
 });

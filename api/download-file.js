@@ -1,59 +1,85 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-module.exports = async (req, res) => {
-  // Enable CORS
+export default async function handler(req, res) {
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // Handle OPTIONS request
+  // Handle preflight request
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
-  
+
   // Only allow GET requests
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   try {
     // Get the filename from the URL path
-    // The URL pattern will be /api/download-file/filename.ext
-    const filename = req.url.split('/').pop();
+    const filename = req.url.split('/').pop().split('?')[0];
     
     if (!filename) {
       return res.status(400).json({ error: 'No filename provided' });
     }
 
     // In Vercel, we use /tmp for temporary storage
-    const downloadsDir = '/tmp';
-    const filePath = path.join(downloadsDir, filename);
+    const filePath = path.join('/tmp', filename);
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found' });
+      return res.status(404).json({ 
+        error: 'File not found',
+        details: 'The requested file may have expired. Please try downloading again.'
+      });
     }
     
     // Get file information
     const stats = fs.statSync(filePath);
     const fileSize = stats.size;
-    
-    // Determine content type based on file extension
-    const ext = path.extname(filename).toLowerCase();
-    const contentType = ext === '.mp3' ? 'audio/mpeg' : 'video/mp4';
-    
+
     // Set appropriate headers for file download
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', fileSize);
-    
-    // Stream the file to the response
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Stream the file
     const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
+
+    // Handle errors during streaming
+    fileStream.on('error', (error) => {
+      console.error('Error streaming file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: 'Error streaming file',
+          details: error.message
+        });
+      }
+    });
+
+    // Clean up file after streaming is complete
+    fileStream.on('end', () => {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`File ${filename} successfully streamed and deleted`);
+      } catch (error) {
+        console.error('Error cleaning up file:', error);
+      }
+    });
+
   } catch (error) {
-    console.error('Error serving file:', error);
-    return res.status(500).json({ error: 'An error occurred while serving the file' });
+    console.error('Error handling download:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Failed to process download',
+        details: error.message
+      });
+    }
   }
-};
+}
